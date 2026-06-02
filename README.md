@@ -3,9 +3,11 @@
 ![platform: Windows](https://img.shields.io/badge/platform-Windows-2d7dd2)
 ![license: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-e5613c)
 
-A desktop app to fully configure the **MADLIONS 60% Hall Effect** keyboard — per-key RGB,
-animations (built-in and your own), Hall-Effect performance tuning, and profiles — as an
-alternative to the official web configurator.
+A desktop app to configure the **lighting and Hall-Effect performance** of the
+**MADLIONS 60% Hall Effect** keyboard — per-key RGB, animations (built-in and your own),
+actuation / rapid-trigger / SOCD tuning, and profiles — as an alternative to the official web
+configurator. Key remapping, Fn layers, and macros are intentionally left to the official software
+(see [What it doesn't do, and why](#what-it-doesnt-do-and-why)).
 
 It talks to the keyboard directly over USB HID (userspace — no drivers, no admin), and reads the
 board's current state back so the interface reflects what's actually stored on the device.
@@ -43,6 +45,23 @@ same thing.
 
 Custom animations and profiles are stored per-user under `~/.madlions/` and never leave your
 machine — they are not part of the app or this repository.
+
+## What it doesn't do, and why
+
+**Key remapping, Fn layers, and macros are not implemented here.** This project started with one
+goal — adding the custom lighting and animations the stock software lacked — and grew to cover the
+Hall-Effect settings too. Remapping is a different beast: reinventing it would be a lot of fragile
+work for little benefit, since the official web app already does it well.
+
+More importantly, you don't lose anything by using both. Those bindings live in the keyboard's
+**onboard flash**, and this app **never writes that region** — so a remap, Fn layer, or macro you
+set in the official software stays put and coexists with the lighting and performance you set here.
+Set your colours and Hall-Effect feel in this app; set your key bindings in the official web app;
+they don't conflict.
+
+**Do not run this app and the official web app at the same time.** Only one program can hold the
+keyboard over USB at once. Close one before opening the other. Each reads the board's current state
+when it connects, so a change you make in one shows up in the other after you switch.
 
 ## Supported hardware
 
@@ -95,9 +114,9 @@ User data (calibration, key map, profiles, custom animations, editor autosave) l
   as the editor allows (and stop when the app is closed — hence minimize-to-tray).
 - The app reads settings back from the board using the read variants of the same commands, so the
   UI shows the keyboard's real state, including changes made in the vendor software.
-- It only ever sends documented configuration reports. It never writes firmware, bootloader, or
-  flash regions. Key remap / Fn-layer / macros are intentionally left to the vendor software (they
-  live in onboard flash, which this app never touches, so they coexist with what you set here).
+- It only ever sends documented configuration reports — never firmware, bootloader, or flash
+  regions. Key remap / Fn-layer / macros are left to the official software
+  (see [What it doesn't do, and why](#what-it-doesnt-do-and-why)).
 
 ## Reporting issues / other models
 
@@ -142,7 +161,7 @@ for the tray icon, PyInstaller for packaging.
 
 ## Acknowledgements
 
-Developed with the help of AI coding tools.
+Developed with the help of Claude, Anthropic's AI coding assistant.
 
 ## License
 
