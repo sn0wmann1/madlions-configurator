@@ -1,79 +1,119 @@
 # MADLIONS 60 Configurator
 
+![platform: Windows](https://img.shields.io/badge/platform-Windows-2d7dd2)
+![license: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-e5613c)
+
 A desktop app to fully configure the **MADLIONS 60% Hall Effect** keyboard — per-key RGB,
-animations (built-in and your own), Hall-Effect performance tuning, and profiles — without the
-official web app.
+animations (built-in and your own), Hall-Effect performance tuning, and profiles — as an
+alternative to the official web configurator.
 
-It talks to the keyboard directly over USB HID (userspace, no drivers, no admin), and reads the
-board's current state back so the UI reflects what's actually stored on the device.
+It talks to the keyboard directly over USB HID (userspace — no drivers, no admin), and reads the
+board's current state back so the interface reflects what's actually stored on the device.
 
-> Not affiliated with or endorsed by MADLIONS. Built by observing the keyboard's own HID protocol
-> for interoperability; no vendor code is included. Use at your own risk (see the disclaimer below).
+![Screenshot of the Lighting view](docs/screenshot.png)
+
+> Not affiliated with, endorsed by, or supported by MADLIONS. Built by observing the keyboard's own
+> HID protocol for interoperability; no vendor code is included. See the disclaimer at the bottom.
+
+## Why this exists
+
+I bought a MADLIONS 60% Hall Effect board and loved the hardware, but the stock lighting options
+felt limited — a handful of canned effects and no real way to design my own or fine-tune the
+Hall-Effect behaviour the way I wanted. So I reverse-engineered the keyboard's HID protocol (by
+watching the traffic the official web app sends) and built a configurator that does what I actually
+wanted: real per-key control, a proper animation editor, full Hall-Effect tuning, and settings that
+read back from the board. It's shared here in case anyone else with the same keyboard wants the
+same thing.
 
 ## Features
 
 - **Lighting** — per-key colour with a live picker, swatches, brightness, and a guided
-  **white-balance** calibrator (floods the board white and tunes R/G/B live).
-- **Effects** — 15 built-in animations plus any custom ones you make.
+  **white-balance** calibrator that floods the board white and tunes R/G/B live.
+- **Effects** — 15 built-in animations plus any custom ones you create.
 - **Editor** — paint your own keyframe animations on a timeline: drag-to-paint, click-to-toggle,
-  per-frame hold/easing (with an accurate in-app preview), multi-frame select for bulk edits,
-  undo/redo, and continuous autosave.
+  per-frame hold/easing with an accurate in-app preview, multi-frame select for bulk edits,
+  undo/redo, and continuous autosave so unsaved work survives a crash.
 - **Performance (Hall Effect)** — per-key actuation depth, rapid trigger, performance toggles
   (Swap WASD / Win-lock / Mac / NKRO / false-touch), and **SOCD / snap-tap** (e.g. A+D for
-  strafing). All read back from the board on open.
+  strafing). All read back from the board when the page opens.
 - **Profiles** — snapshot and restore complete looks (lighting, white balance, and more).
 - **Key-mapping wizard** — the firmware's slot order is not the visual order; map it once per board.
 - **Minimize to tray** — closing the window keeps animations streaming (the app keeps running in
-  the system tray, like Discord/Steam); quit fully from the tray menu.
+  the system tray, like Discord or Steam); quit fully from the tray menu.
+
+Custom animations and profiles are stored per-user under `~/.madlions/` and never leave your
+machine — they are not part of the app or this repository.
 
 ## Supported hardware
 
-- MADLIONS 60% Hall Effect keyboard (USB VID `0x373B`, PID `0x1054`).
+Developed and verified against:
 
-Everything has been verified against one physical unit. A different firmware revision of the same
-model will very likely work, but the per-key index maps were measured on real hardware — if
-something looks off, run the key-mapping wizard and re-check.
+- **MADLIONS MAD60** — 60% Hall Effect keyboard, USB **VID `0x373B`, PID `0x1054`**, 61 keys
+  (bottom row: Ctrl, Win, Alt, Space, Alt, Menu, Ctrl, Fn).
 
-> Key remap / Fn-layer / macros are intentionally **not** implemented here — set those in the
-> official FGG web app. They live in the keyboard's onboard flash and this app never writes that
-> region, so they coexist with the colours and Hall-Effect settings configured here.
+Everything was measured on one physical unit. A different firmware revision of the same model will
+very likely work, but the per-key index maps were measured on real hardware. **Other MADLIONS
+models may use a different USB ID or protocol and are not guaranteed** — see
+[Reporting issues](#reporting-issues--other-models) below.
 
-## Requirements
+To check what you have on Windows: Device Manager → your keyboard → Properties → Details →
+"Hardware Ids". If it shows `VID_373B&PID_1054`, it's the supported board.
 
-- Python 3.11+
-- Windows (primary target; uses the Edge WebView2 runtime, preinstalled on Windows 10/11)
+## Install and run
 
-Install dependencies:
+**Easiest (Windows, no Python):** download `MADLIONS60.exe` from the
+[Releases](../../releases) page and run it. The Edge WebView2 runtime is required; it is
+preinstalled on Windows 10/11.
+
+**From source:**
 
 ```
 pip install -r requirements.txt
-```
-
-## Running
-
-```
 python main.py
 ```
 
-or double-click **`MADLIONS.bat`** (use `MADLIONS-debug.bat` to see a console for troubleshooting).
+or double-click `MADLIONS.bat` (use `MADLIONS-debug.bat` to see a console for troubleshooting).
 
-If `hidapi` can't open the device on Windows, you may need to assign the WinUSB driver to the
+If `hidapi` can't open the device on Windows, assign the WinUSB driver to the keyboard's
 RGB/config interface with [Zadig](https://zadig.akeo.ie/).
 
 ## First-time setup
 
 1. **Key mapping** (Settings > "run mapping wizard") — teaches the app your board's slot order so
    per-key control is correct. Saved to `~/.madlions/`.
-2. **White balance** (Settings > "calibrate white") — if white looks teal/pink, tune R/G/B until
-   it reads neutral. Note: balanced white is dimmer than full blast, which is a property of the
-   LEDs, not a bug.
+2. **White balance** (Settings > "calibrate white") — if white looks teal or pink, tune R/G/B until
+   it reads neutral. A balanced white is dimmer than full blast; that's a property of the LEDs, not
+   a bug.
 
 User data (calibration, key map, profiles, custom animations, editor autosave) lives in
 `~/.madlions/`.
 
+## How it works
+
+- `device/` is the only layer that builds raw HID report bytes; everything else goes through it.
+- Animations are rendered on the host and streamed to the board frame by frame, so they are as rich
+  as the editor allows (and stop when the app is closed — hence minimize-to-tray).
+- The app reads settings back from the board using the read variants of the same commands, so the
+  UI shows the keyboard's real state, including changes made in the vendor software.
+- It only ever sends documented configuration reports. It never writes firmware, bootloader, or
+  flash regions. Key remap / Fn-layer / macros are intentionally left to the vendor software (they
+  live in onboard flash, which this app never touches, so they coexist with what you set here).
+
+## Reporting issues / other models
+
+Bug reports and "please make it work on my MADLIONS" requests are welcome — open an
+[issue](../../issues). Because the protocol was reverse-engineered per model, getting a different
+model working usually needs a capture from that hardware. Helpful details to include:
+
+- Your exact keyboard model and its USB `VID:PID` (see [Supported hardware](#supported-hardware)).
+- What you tried and what happened (and what you expected).
+- Whether the official software works on the same machine.
+- For a new model: the capture tools in `tools/` (a WebHID logger + a local beacon) can record the
+  protocol the official web app sends; see the comments in those files.
+
 ## Building a standalone .exe
 
-A PyInstaller spec is included. Build with:
+A PyInstaller spec is included:
 
 ```
 pip install pyinstaller
@@ -81,8 +121,8 @@ pyinstaller madlions.spec
 ```
 
 The one-file executable is written to `dist/MADLIONS60.exe`. It bundles the web frontend, the
-`hidapi` native library, the pywebview WebView2 loader, and the tray icon; the target machine
-still needs the Edge WebView2 runtime (preinstalled on Windows 10/11).
+`hidapi` native library, the pywebview WebView2 loader, and the tray icon; the target machine still
+needs the Edge WebView2 runtime (preinstalled on Windows 10/11).
 
 ## Project layout
 
@@ -90,15 +130,25 @@ still needs the Edge WebView2 runtime (preinstalled on Windows 10/11).
 device/    HID protocol + connect/read/write (the only layer that builds report bytes)
 engine/    models, animation runtime, profile/animation storage, layout
 ui/        web frontend (HTML/CSS/JS) served in a pywebview window
+tools/     reverse-engineering capture helpers (not needed to run the app)
 bridge.py  pywebview js_api: the methods the frontend calls into Python
 main.py    wires it together, single-instance + tray
 ```
 
+## Tech stack
+
+Python 3.11+, `hidapi` for USB HID, `pywebview` (Edge WebView2) for the window, `pystray` + `Pillow`
+for the tray icon, PyInstaller for packaging.
+
+## Acknowledgements
+
+Developed with the help of AI coding tools.
+
 ## License
 
-Licensed under the **PolyForm Noncommercial License 1.0.0** — see [`LICENSE`](LICENSE). You may
-use, modify, and share it for any **noncommercial** purpose (personal use, hobby projects,
-research, education, etc.). Commercial use — including selling it or charging for it — is not
+Licensed under the **PolyForm Noncommercial License 1.0.0** — see [`LICENSE`](LICENSE). You may use,
+modify, and share it for any **noncommercial** purpose (personal use, hobby projects, research,
+education, and the like). Commercial use — including selling it or charging for it — is not
 permitted. Keep the copyright notice in any copies.
 
 ## Disclaimer
