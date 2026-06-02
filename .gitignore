@@ -1,0 +1,30 @@
+__pycache__/
+*.pyc
+*.pyo
+
+# PyInstaller build output (madlions.spec itself is source and IS tracked)
+build/
+dist/
+.venv/
+venv/
+
+# user-specific runtime data / calibration (the real copy lives in ~/.madlions)
+madlions_cal.json
+
+# capture logs and scratch screenshots
+*.log
+.shot.png
+_*.png
+
+# reference material / personal notes — kept locally, NOT published
+old_madlions_files_for_reference/
+web_chat_transcript/
+
+# maintainer / internal docs — kept locally, NOT published
+CLAUDE.md
+COLLABORATION.md
+CAPTURE_GUIDE.md
+BUILD.md
+bridge_api.md
+protocol_notes.md
+madlions_configurator_BUILD_PLAN.md

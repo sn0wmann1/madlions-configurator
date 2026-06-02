@@ -1,0 +1,4 @@
+hidapi>=0.14
+pywebview>=6.0
+pystray>=0.19      # system-tray icon (minimize-to-tray keeps animations streaming)
+Pillow>=10.0       # draws the tray icon
