@@ -2,6 +2,7 @@
 MADLIONS 60% Hall Effect Configurator — entry point.
 
 Wires the bridge to a pywebview window that loads the web UI. Run:  python main.py
+Also supports --crossfade RRGGBB for one-shot color transitions from wallpaper sync scripts.
 """
 
 from __future__ import annotations
@@ -10,6 +11,46 @@ import os
 import socket
 import sys
 import threading
+
+
+def _run_crossfade(hex_color):
+    """CLI mode: connect to the keyboard, crossfade from off to *hex_color*, disconnect."""
+    import time
+    from device.controller import DeviceController
+    from device.protocol import NUM_SLOTS
+
+    hex_color = hex_color.lstrip("#")
+    if len(hex_color) != 6:
+        print(f"Invalid color: {hex_color!r} — use RRGGBB or #RRGGBB", file=sys.stderr)
+        return 1
+
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+
+    ctrl = DeviceController()
+    ctrl.auto_connect()
+    if not ctrl.is_connected:
+        print("Keyboard not found", file=sys.stderr)
+        return 1
+
+    target = [(r, g, b)] * NUM_SLOTS
+    steps = 20
+    step_delay = 0.3 / steps
+    for i in range(1, steps + 1):
+        t = i / steps
+        ease = t * t * (3 - 2 * t)
+        frame = [(int(r * ease), int(g * ease), int(b * ease))] * NUM_SLOTS
+        ctrl.send_colors(frame)
+        time.sleep(step_delay)
+
+    ctrl.disconnect()
+    return 0
+
+
+if len(sys.argv) >= 3 and sys.argv[1] == "--crossfade":
+    sys.exit(_run_crossfade(sys.argv[2]))
+
 
 import webview
 

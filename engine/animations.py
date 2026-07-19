@@ -248,23 +248,6 @@ def ember_drift(get_color):
     return f
 
 
-def crossfade(get_color):
-    def f(t):
-        r, g, b = get_color()
-        hue = (t * 0.04) % 1.0
-        tr, tg, tb = _hsv(hue, 0.8, 1.0)
-        out = []
-        for i in range(N):
-            phase = (math.sin(i * 0.2 + t * 0.8) + 1) / 2
-            out.append((
-                int(r + (tr - r) * phase),
-                int(g + (tg - g) * phase),
-                int(b + (tb - b) * phase),
-            ))
-        return out
-    return f
-
-
 # name -> builder. Order is the display order in the UI.
 BUILDERS = {
     "Rainbow wave": rainbow,
@@ -282,7 +265,6 @@ BUILDERS = {
     "Glitch noise": glitch_noise,
     "Aurora": aurora,
     "Ember drift": ember_drift,
-    "Crossfade": crossfade,
 }
 
 

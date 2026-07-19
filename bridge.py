@@ -12,6 +12,8 @@ the discovered keymap (engine.keymap), learned with the in-app mapping wizard.
 
 from __future__ import annotations
 
+import time
+
 from device import protocol
 from device.controller import DeviceController
 from engine import animations, custom_anim, keymap, layout, profile_store
@@ -84,6 +86,24 @@ class Api:
         per_key = [tuple(self.key_colors.get(kid, (0, 0, 0))) for kid in range(NUM_KEYS)]
         return self._perkey_to_wire(per_key)
 
+    def _crossfade_wire(self, current_wire, target_wire, duration=0.3):
+        """Smoothly crossfade all slots from current_wire to target_wire using
+        smoothstep easing. Blocks during the transition (duration < 0.5s)."""
+        steps = 20
+        step_delay = duration / steps
+        for i in range(1, steps + 1):
+            t = i / steps
+            ease = t * t * (3 - 2 * t)  # smoothstep
+            frame = []
+            for cur, tgt in zip(current_wire, target_wire):
+                frame.append((
+                    int(cur[0] + (tgt[0] - cur[0]) * ease),
+                    int(cur[1] + (tgt[1] - cur[1]) * ease),
+                    int(cur[2] + (tgt[2] - cur[2]) * ease),
+                ))
+            self.controller.send_colors(frame)
+            time.sleep(step_delay)
+
     def _push(self):
         ok = self.controller.send_colors(self._wire())
         return {"ok": ok, "status": self.controller.status()}
@@ -94,20 +114,31 @@ class Api:
         return True
 
     def set_key_colors(self, updates):
-        """Apply colors to specific physical keys (by key_id) and push."""
+        """Apply colors to specific physical keys (by key_id) with a crossfade transition."""
         self.runtime.halt()
+        current_wire = self._wire()
+        new_colors = dict(self.key_colors)
         for k, rgb in updates.items():
             kid = int(k)
-            if kid in self.key_colors:
-                self.key_colors[kid] = [int(rgb[0]), int(rgb[1]), int(rgb[2])]
-        return self._push()
+            if kid in new_colors:
+                new_colors[kid] = [int(rgb[0]), int(rgb[1]), int(rgb[2])]
+        saved = self.key_colors
+        self.key_colors = new_colors
+        target_wire = self._wire()
+        self.key_colors = saved
+        self._crossfade_wire(current_wire, target_wire)
+        self.key_colors = new_colors
+        return {"ok": True, "status": self.controller.status()}
 
     def set_all(self, rgb):
         self.runtime.halt()
-        c = [int(rgb[0]), int(rgb[1]), int(rgb[2])]
+        current_wire = self._wire()
+        target = (int(rgb[0]), int(rgb[1]), int(rgb[2]))
+        target_wire = [target] * NUM_SLOTS
+        self._crossfade_wire(current_wire, target_wire)
         for kid in self.key_colors:
-            self.key_colors[kid] = list(c)
-        return self._push()
+            self.key_colors[kid] = list(target)
+        return {"ok": True, "status": self.controller.status()}
 
     # ── Animations ──────────────────────────────────────────────────────────────
     def play_animation(self, name):
