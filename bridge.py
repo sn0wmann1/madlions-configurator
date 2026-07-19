@@ -86,7 +86,7 @@ class Api:
         per_key = [tuple(self.key_colors.get(kid, (0, 0, 0))) for kid in range(NUM_KEYS)]
         return self._perkey_to_wire(per_key)
 
-    def _crossfade_wire(self, current_wire, target_wire, duration=0.3):
+    def _crossfade_wire(self, current_wire, target_wire, duration=0.5):
         """Smoothly crossfade all slots from current_wire to target_wire using
         smoothstep easing. Blocks during the transition (duration < 0.5s)."""
         steps = 20

@@ -36,7 +36,7 @@ def _run_crossfade(hex_color):
 
     target = [(r, g, b)] * NUM_SLOTS
     steps = 20
-    step_delay = 0.3 / steps
+    step_delay = 0.5 / steps
     for i in range(1, steps + 1):
         t = i / steps
         ease = t * t * (3 - 2 * t)
