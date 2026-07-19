@@ -204,7 +204,7 @@ body {
 .key:active { transform: translateY(1px); }
 .key.sel { outline: 2px solid var(--accent); outline-offset: 1px; z-index: 3; }
 .key.lit { background: var(--kc); color: var(--kt, #111); box-shadow: 0 0 14px 0 var(--kglow, transparent), inset 0 1px 0 rgba(255,255,255,0.18); }
-.key .klbl { position: relative; z-index: 2; }
+.key .klbl { position: relative; z-index: 2; font-family: system-ui, -apple-system, sans-serif; font-weight: 600; font-size: 8px; line-height: 1.15; }
 
 .board-bar { margin-top: 18px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; }
 .hint { color: var(--ink-3); font-size: 12px; }
