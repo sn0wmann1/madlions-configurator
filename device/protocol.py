@@ -10,7 +10,9 @@ from __future__ import annotations
 
 # ── Device identity (CONFIRMED) ────────────────────────────────────────────────
 VID = 0x373B
-PID = 0x1054
+PID = 0x1054          # MADLIONS 60%
+PID_MAD68 = 0x1058    # MADLIONS 68%
+SUPPORTED_PIDS = (PID, PID_MAD68)
 RGB_USAGE_PAGE = 0xFF60   # the RGB-control interface enumerates with this usage page
 
 # ── Geometry ────────────────────────────────────────────────────────────────────

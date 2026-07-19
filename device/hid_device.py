@@ -17,8 +17,11 @@ class DeviceNotFound(RuntimeError):
 
 
 def enumerate_interfaces():
-    """Return all HID interfaces for the keyboard's VID/PID (may be several)."""
-    return hid.enumerate(protocol.VID, protocol.PID)
+    """Return all HID interfaces for supported keyboard models (all PIDs)."""
+    devs = []
+    for pid in protocol.SUPPORTED_PIDS:
+        devs.extend(hid.enumerate(protocol.VID, pid))
+    return devs
 
 
 def find_rgb_interface():
@@ -66,8 +69,8 @@ class HidBackend:
             "product": dev.get("product_string"),
             "interface_number": dev.get("interface_number"),
             "usage_page": dev.get("usage_page"),
-            "vid": protocol.VID,
-            "pid": protocol.PID,
+            "vid": dev.get("vendor_id", protocol.VID),
+            "pid": dev.get("product_id", protocol.PID),
         }
 
     def write(self, data: bytes) -> int:
