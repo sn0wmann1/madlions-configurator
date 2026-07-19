@@ -458,6 +458,57 @@ class Api:
         ok2 = self.controller.send_false_touch(self.perf["false_touch"])
         return {"ok": bool(ok1 and ok2), "perf": dict(self.perf)}
 
+    # ── Key mapping (read/write onboard keymap via cmd 12/13) ─────────────────
+    def get_keymap(self):
+        """Read the full keymap from the keyboard. Returns {firmware_index: hid_code}."""
+        import time
+        codes = []
+        for page in range(protocol.KEYMAP_TOTAL_PAGES):
+            offset = page * protocol.KEYMAP_PAGE_SIZE
+            pkt = protocol.build_keymap_read(offset & 0xFF)
+            self.controller._send_packets([pkt])
+            time.sleep(0.05)
+            resp = self.controller.backend.read(64)
+            if resp:
+                codes.extend(protocol.parse_keymap_page(resp))
+        return {i: c for i, c in enumerate(codes)}
+
+    def set_keymap(self, remaps):
+        """Write key remaps. *remaps* = {firmware_index: hid_code}. Only indices
+        present in *remaps* are changed; all others keep their current value."""
+        import time
+        current = self._read_keymap_raw()
+        full = list(current) + [0] * (104 - len(current))
+        full = full[:104]
+        for idx, code in remaps.items():
+            if 0 <= idx < 104:
+                full[idx] = code
+        ok = True
+        for page in range(protocol.KEYMAP_TOTAL_PAGES):
+            offset = page * protocol.KEYMAP_PAGE_SIZE
+            page_codes = []
+            for i in range(protocol.KEYMAP_WRITE_CODES):
+                idx = page * protocol.KEYMAP_ENTRIES_PER_PAGE + i
+                page_codes.append(full[idx] if idx < len(full) else 0)
+            pkt = protocol.build_keymap_write(offset & 0xFF, page_codes)
+            if not self.controller._send_packets([pkt]):
+                ok = False
+            time.sleep(0.05)
+        return ok
+
+    def _read_keymap_raw(self):
+        import time
+        codes = []
+        for page in range(protocol.KEYMAP_TOTAL_PAGES):
+            offset = page * protocol.KEYMAP_PAGE_SIZE
+            pkt = protocol.build_keymap_read(offset & 0xFF)
+            self.controller._send_packets([pkt])
+            time.sleep(0.05)
+            resp = self.controller.backend.read(64)
+            if resp:
+                codes.extend(protocol.parse_keymap_page(resp))
+        return codes
+
     # ── Read-back from the board (CONFIRMED) ────────────────────────────────────
     _SOCD_MODE_NAMES = {v: k for k, v in _SOCD_MODES.items()}
 
