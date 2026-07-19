@@ -1,45 +1,59 @@
 """
-Canonical 60% layout. ONE map shared by the UI grid, the keymap, and the lighting.
+MADLIONS keyboard layouts — one map shared by the UI grid, the keymap, and the
+lighting. Each entry: (label, key_id, row, x_units, width_units).
 
-key_id == firmware slot index (0..59). Each entry: label, row, x (column offset in key
-units), w (width in units). Slots 60..79 exist on the wire as padding and are not keys.
-
-Kept in sync with the slot order used by the device protocol layer.
+Automatic layout selection is NOT implemented yet; the active layout is hard-coded
+to MAD68 (68 keys). For MAD60 (61 keys) replace KEYS below.
 """
 
 from __future__ import annotations
 
-# (label, key_id/slot, row, x_units, width_units)
 KEYS = [
-    # Row 0 — number row
-    ("Esc", 0, 0, 0.0, 1), ("1", 1, 0, 1, 1), ("2", 2, 0, 2, 1), ("3", 3, 0, 3, 1),
-    ("4", 4, 0, 4, 1), ("5", 5, 0, 5, 1), ("6", 6, 0, 6, 1), ("7", 7, 0, 7, 1),
-    ("8", 8, 0, 8, 1), ("9", 9, 0, 9, 1), ("0", 10, 0, 10, 1), ("-", 11, 0, 11, 1),
+    # Row 0 — number row (15 keys: standard 60% + Del in right column)
+    ("Esc", 0, 0, 0.0, 1), ("1", 1, 0, 1, 1), ("2", 2, 0, 2, 1),
+    ("3", 3, 0, 3, 1), ("4", 4, 0, 4, 1), ("5", 5, 0, 5, 1),
+    ("6", 6, 0, 6, 1), ("7", 7, 0, 7, 1), ("8", 8, 0, 8, 1),
+    ("9", 9, 0, 9, 1), ("0", 10, 0, 10, 1), ("-", 11, 0, 11, 1),
     ("=", 12, 0, 12, 1), ("Bksp", 13, 0, 13, 2),
-    # Row 1 — QWERTY
-    ("Tab", 14, 1, 0, 1.5), ("Q", 15, 1, 1.5, 1), ("W", 16, 1, 2.5, 1),
-    ("E", 17, 1, 3.5, 1), ("R", 18, 1, 4.5, 1), ("T", 19, 1, 5.5, 1),
-    ("Y", 20, 1, 6.5, 1), ("U", 21, 1, 7.5, 1), ("I", 22, 1, 8.5, 1),
-    ("O", 23, 1, 9.5, 1), ("P", 24, 1, 10.5, 1), ("[", 25, 1, 11.5, 1),
-    ("]", 26, 1, 12.5, 1), ("\\", 27, 1, 13.5, 1.5),
-    # Row 2 — home row
-    ("Caps", 28, 2, 0, 1.75), ("A", 29, 2, 1.75, 1), ("S", 30, 2, 2.75, 1),
-    ("D", 31, 2, 3.75, 1), ("F", 32, 2, 4.75, 1), ("G", 33, 2, 5.75, 1),
-    ("H", 34, 2, 6.75, 1), ("J", 35, 2, 7.75, 1), ("K", 36, 2, 8.75, 1),
-    ("L", 37, 2, 9.75, 1), (";", 38, 2, 10.75, 1), ("'", 39, 2, 11.75, 1),
-    ("Enter", 40, 2, 12.75, 2.25),
-    # Row 3 — shift row
-    ("Shift", 41, 3, 0, 2.25), ("Z", 42, 3, 2.25, 1), ("X", 43, 3, 3.25, 1),
-    ("C", 44, 3, 4.25, 1), ("V", 45, 3, 5.25, 1), ("B", 46, 3, 6.25, 1),
-    ("N", 47, 3, 7.25, 1), ("M", 48, 3, 8.25, 1), (",", 49, 3, 9.25, 1),
-    (".", 50, 3, 10.25, 1), ("/", 51, 3, 11.25, 1), ("Shift", 52, 3, 12.25, 2.75),
-    # Row 4 — bottom row (8 keys, confirmed against the real MAD60)
-    ("Ctrl", 53, 4, 0, 1.25), ("Win", 54, 4, 1.25, 1.25), ("Alt", 55, 4, 2.5, 1.25),
-    ("Space", 56, 4, 3.75, 6.25), ("Alt", 57, 4, 10, 1.25), ("Menu", 58, 4, 11.25, 1.25),
-    ("Ctrl", 59, 4, 12.5, 1.25), ("Fn", 60, 4, 13.75, 1.25),
+    ("Del", 14, 0, 15, 1),
+
+    # Row 1 — QWERTY (15 keys: standard + PgUp)
+    ("Tab", 15, 1, 0, 1.5),
+    ("Q", 16, 1, 1.5, 1), ("W", 17, 1, 2.5, 1), ("E", 18, 1, 3.5, 1),
+    ("R", 19, 1, 4.5, 1), ("T", 20, 1, 5.5, 1), ("Y", 21, 1, 6.5, 1),
+    ("U", 22, 1, 7.5, 1), ("I", 23, 1, 8.5, 1), ("O", 24, 1, 9.5, 1),
+    ("P", 25, 1, 10.5, 1), ("[", 26, 1, 11.5, 1), ("]", 27, 1, 12.5, 1),
+    ("\\", 28, 1, 13.5, 1.5),
+    ("PgUp", 29, 1, 15, 1),
+
+    # Row 2 — home row (14 keys: standard + PgDn)
+    ("Caps", 30, 2, 0, 1.75),
+    ("A", 31, 2, 1.75, 1), ("S", 32, 2, 2.75, 1), ("D", 33, 2, 3.75, 1),
+    ("F", 34, 2, 4.75, 1), ("G", 35, 2, 5.75, 1), ("H", 36, 2, 6.75, 1),
+    ("J", 37, 2, 7.75, 1), ("K", 38, 2, 8.75, 1), ("L", 39, 2, 9.75, 1),
+    (";", 40, 2, 10.75, 1), ("'", 41, 2, 11.75, 1),
+    ("Enter", 42, 2, 12.75, 2.25),
+    ("PgDn", 43, 2, 15, 1),
+
+    # Row 3 — shift row (14 keys: standard, RShift shortened, + Up / End)
+    ("Shift", 44, 3, 0, 2.25),
+    ("Z", 45, 3, 2.25, 1), ("X", 46, 3, 3.25, 1), ("C", 47, 3, 4.25, 1),
+    ("V", 48, 3, 5.25, 1), ("B", 49, 3, 6.25, 1), ("N", 50, 3, 7.25, 1),
+    ("M", 51, 3, 8.25, 1), (",", 52, 3, 9.25, 1), (".", 53, 3, 10.25, 1),
+    ("/", 54, 3, 11.25, 1), ("Shift", 55, 3, 12.25, 1.75),
+    ("Up", 56, 3, 14, 1),
+    ("End", 57, 3, 15, 1),
+
+    # Row 4 — bottom row (10 keys: 3 mods left, space, 3 mods right, 3 arrows)
+    ("Ctrl", 58, 4, 0, 1.25), ("Win", 59, 4, 1.25, 1.25),
+    ("Alt", 60, 4, 2.5, 1.25),
+    ("Space", 61, 4, 3.75, 6.25),
+    ("Alt", 62, 4, 10, 1.25), ("Fn", 63, 4, 11.25, 1.25),
+    ("Ctrl", 64, 4, 12.5, 1.25),
+    ("←", 65, 4, 13.75, 1), ("↓", 66, 4, 14.75, 1), ("→", 67, 4, 15.75, 1),
 ]
 
-NUM_KEYS = len(KEYS)        # 60 physical keys
+NUM_KEYS = len(KEYS)        # 68 physical keys
 NUM_SLOTS = 80              # wire length including padding
 
 
@@ -50,26 +64,11 @@ def as_dicts():
 
 
 # ── Actuation array index per key_id ────────────────────────────────────────────
-# The Hall-Effect actuation array (protocol 03 96 0d) is a 14-column firmware matrix
-# (index = row*14 + column). Rows 0-2 (key_ids 0-40) are identity. Row 2 has only 13
-# keys, leaving one matrix column empty, which shifts the whole Shift row up by one.
-# Row 4 (bottom) has wide gaps under the spacebar. Confirmed against FGG by setting
-# individual keys and reading which array index changed (2026-06-02). This is a
-# DIFFERENT index space than the RGB colour slots.
-# Every entry below was directly measured against FGG (ruler capture 2026-06-02), not inferred.
-_ACT_INDEX_OVERRIDES = {40: 41, 41: 42}                            # Enter->41 (idx40 gap); LShift->42
-_ACT_INDEX_OVERRIDES.update({kid: kid + 2 for kid in range(42, 52)})  # Z..slash -> 44..53 (idx43 gap)
-_ACT_INDEX_OVERRIDES[52] = 55                                      # Right Shift (idx54 gap)
-_ACT_INDEX_OVERRIDES.update({
-    53: 56,   # Left Ctrl
-    54: 57,   # Left Win
-    55: 58,   # Left Alt
-    56: 62,   # Space
-    57: 66,   # Right Alt
-    58: 67,   # Menu
-    59: 68,   # Right Ctrl
-    60: 69,   # Win Fn
-})
+# TODO: measure these on real MAD68 hardware via FGG like the MAD60 mappings below.
+# For now all keys use identity mapping (actuation_index(key_id) == key_id), which
+# means Hall-Effect actuation / rapid-trigger read-back will NOT match the firmware
+# matrix. The RGB pipeline is unaffected.
+_ACT_INDEX_OVERRIDES = {}
 
 
 def actuation_index(key_id: int) -> int:
@@ -79,7 +78,8 @@ def actuation_index(key_id: int) -> int:
 
 # ── (row, column) per key — used by the SOCD/advanced-key protocol ──────────────
 # Advanced keys address a key as (physical row 0-4 top..bottom, 0-based column within
-# that row). Confirmed against FGG (A+D / S+D / Q+D captures 2026-06-02).
+# that row). Computed automatically from the visual layout; this is approximate and
+# SHOULD be confirmed against real hardware captures before relying on SOCD writes.
 _ROW_FIRST = {}
 for (_lbl, _kid, _row, _x, _w) in KEYS:
     if _row not in _ROW_FIRST or _kid < _ROW_FIRST[_row]:

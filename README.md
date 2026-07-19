@@ -1,4 +1,4 @@
-# MADLIONS 60 Configurator
+# MADLIONS 68 Configurator
 
 ![platform: Windows](https://img.shields.io/badge/platform-Windows-2d7dd2)
 ![license: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-e5613c)

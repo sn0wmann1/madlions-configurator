@@ -118,7 +118,7 @@ def main():
 
     api = Api()
     window = webview.create_window(
-        "MADLIONS 60 — Configurator",
+        "MADLIONS 68 — Configurator",
         os.path.join(_UI_DIR, "index.html"),
         js_api=api,
         width=1240,
