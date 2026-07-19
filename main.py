@@ -52,6 +52,8 @@ if len(sys.argv) >= 3 and sys.argv[1] == "--crossfade":
     sys.exit(_run_crossfade(sys.argv[2]))
 
 
+os.environ.setdefault("PYWEBVIEW_GUI", "qt")  # Qt works on Wayland; GTK/Gdk fails on Hyprland
+
 import webview
 
 from bridge import Api
@@ -101,6 +103,12 @@ def _acquire_single_instance(on_activate):
 
 
 def main():
+    # Pre-initialize Qt backend before any threads start — QApplication must be
+    # created on the main thread before HID/socket/animation daemon threads launch,
+    # otherwise Qt's GLib integration crashes on Wayland.
+    from webview.guilib import initialize as _init_gui
+    _init_gui(forced_gui="qt")
+
     # Enforce a single instance: a second launch restores the existing window and exits,
     # so the user can't end up with several copies open or minimized to the tray.
     holder = {}
@@ -134,7 +142,7 @@ def main():
     window.events.closing += _on_closing
     holder["window"] = window
     tray.start()
-    webview.start()
+    webview.start(gui="qt")
     tray.stop()
     api.shutdown()
 
