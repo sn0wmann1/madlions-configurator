@@ -187,7 +187,7 @@ body {
 }
 .key {
   position: absolute; border-radius: 7px; cursor: pointer;
-  display: flex; align-items: flex-start; justify-content: flex-start;
+  display: flex; align-items: center; justify-content: center;
   padding: 4px 6px; font-family: var(--font-display); font-weight: 500; font-size: 9.5px; line-height: 1;
   color: rgba(255,255,255,0.7);
   background: linear-gradient(180deg, #2a2a30, #202024);
