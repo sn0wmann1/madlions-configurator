@@ -170,7 +170,8 @@ def build_socd_clear(slot=0):
 
 CMD_KEYMAP = 0x12
 KEYMAP_PAGE_SIZE = 0x1C          # 28 bytes per page
-KEYMAP_ENTRIES_PER_PAGE = 14     # 14 × 2-byte HID usage codes
+KEYMAP_ENTRIES_PER_PAGE = 14     # 14 × 2-byte HID usage codes per page
+KEYMAP_WRITE_CODES = 13          # HID OUT report fits 13 codes (26B) + 6B header = 32B
 KEYMAP_TOTAL_ENTRIES = 112       # covers all layers (Normal + FN1/FN2/FN3)
 KEYMAP_TOTAL_PAGES = KEYMAP_TOTAL_ENTRIES // KEYMAP_ENTRIES_PER_PAGE  # 8
 
@@ -244,14 +245,15 @@ def parse_keymap_page(resp: bytes) -> list[int]:
 
 
 def build_keymap_write(offset: int, codes: list[int]) -> bytes:
-    """Build a keymap page write. Inferred from read response format."""
+    """Build a keymap page write. Inferred from read response format.
+    Writes up to 13 codes (26 bytes) to fit in the 33-byte HID OUT report."""
     pkt = bytearray(REPORT_LEN)
     pkt[1] = CMD_KEYMAP           # 12
     pkt[2] = 0x00                 # sub
     pkt[3] = offset & 0xFF        # offset
     pkt[4] = KEYMAP_PAGE_SIZE     # 0x1c
     pkt[5] = 0x00                 # reserved
-    for k in range(min(KEYMAP_ENTRIES_PER_PAGE, len(codes))):
+    for k in range(min(KEYMAP_WRITE_CODES, len(codes))):
         code = codes[k] & 0xFFFF
         pkt[6 + k * 2] = code & 0xFF
         pkt[7 + k * 2] = (code >> 8) & 0xFF
