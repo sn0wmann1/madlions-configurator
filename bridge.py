@@ -539,7 +539,7 @@ class Api:
         if 0 <= slot < NUM_SLOTS:
             wire[slot] = (255, 255, 255)
         ok = self.controller.send_colors(wire, raw=True)
-        return {"ok": ok}
+        return {"ok": ok, "slot": slot}
 
     def save_key_map(self, mapping):
         """Persist a {key_id: slot} map from the wizard, then re-apply current colors."""
