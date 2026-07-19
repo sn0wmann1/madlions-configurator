@@ -161,30 +161,127 @@ def build_socd_clear(slot=0):
 
 
 # ============================================================================
-# UNVERIFIED — key remap, Fn binding, and macros are intentionally not implemented:
-# they are configured in the vendor software and stored in the keyboard's onboard
-# flash, and this app never writes that region (so they coexist with the colours and
-# Hall-Effect settings configured here). These stubs raise rather than guess at bytes.
+# Key remapping protocol — CAPTURED from hub.f.gg WebHID traffic (2026-07-19)
+# Command 12 00: reads/writes the onboard keymap (112 entries, 2B HID usage codes
+# LE, in 28-byte pages of 14 codes each). The write variant uses the same framing
+# with non-zero payload (inferred — the web app only reads; writes are done by the
+# desktop driver, but the protocol is expected to mirror the read format).
 # ============================================================================
 
-class ProtocolNotCaptured(NotImplementedError):
-    """Raised by any report builder whose layout has not been reverse-engineered."""
+CMD_KEYMAP = 0x12
+KEYMAP_PAGE_SIZE = 0x1C          # 28 bytes per page
+KEYMAP_ENTRIES_PER_PAGE = 14     # 14 × 2-byte HID usage codes
+KEYMAP_TOTAL_ENTRIES = 112       # covers all layers (Normal + FN1/FN2/FN3)
+KEYMAP_TOTAL_PAGES = KEYMAP_TOTAL_ENTRIES // KEYMAP_ENTRIES_PER_PAGE  # 8
+
+CMD_MACRO_COUNT = 0x0C           # read: response byte 1 = number of macro slots (16)
+CMD_MACRO_INFO = 0x0D            # read macro metadata
+CMD_MACRO_PAGE = 0x0E            # read macro pages (0x1c byte chunks)
+CMD_MACRO_PAGE2 = 0x0F           # another macro read variant
+
+# Standard HID keyboard usage codes (selection — full table in HID Usage Tables spec)
+HID_KEYCODES = {
+    # Letters
+    "A": 0x04, "B": 0x05, "C": 0x06, "D": 0x07, "E": 0x08, "F": 0x09, "G": 0x0A,
+    "H": 0x0B, "I": 0x0C, "J": 0x0D, "K": 0x0E, "L": 0x0F, "M": 0x10, "N": 0x11,
+    "O": 0x12, "P": 0x13, "Q": 0x14, "R": 0x15, "S": 0x16, "T": 0x17, "U": 0x18,
+    "V": 0x19, "W": 0x1A, "X": 0x1B, "Y": 0x1C, "Z": 0x1D,
+    # Numbers
+    "1": 0x1E, "2": 0x1F, "3": 0x20, "4": 0x21, "5": 0x22,
+    "6": 0x23, "7": 0x24, "8": 0x25, "9": 0x26, "0": 0x27,
+    # Modifiers / special
+    "Enter": 0x28, "Esc": 0x29, "Bksp": 0x2A, "Tab": 0x2B, "Space": 0x2C,
+    "-": 0x2D, "=": 0x2E, "[": 0x2F, "]": 0x30, "\\": 0x31,
+    ";": 0x33, "'": 0x34, "`": 0x35, ",": 0x36, ".": 0x37, "/": 0x38,
+    "Caps": 0x39, "F1": 0x3A, "F2": 0x3B, "F3": 0x3C, "F4": 0x3D,
+    "F5": 0x3E, "F6": 0x3F, "F7": 0x40, "F8": 0x41, "F9": 0x42,
+    "F10": 0x43, "F11": 0x44, "F12": 0x45,
+    "PrtSc": 0x46, "ScrLk": 0x47, "Pause": 0x48,
+    "Ins": 0x49, "Home": 0x4A, "PgUp": 0x4B, "Del": 0x4C,
+    "End": 0x4D, "PgDn": 0x4E, "→": 0x4F, "←": 0x50, "↓": 0x51, "↑": 0x52,
+    # System (modifier keys)
+    "LCtrl": 0xE0, "LShift": 0xE1, "LAlt": 0xE2, "LWin": 0xE3,
+    "RCtrl": 0xE4, "RShift": 0xE5, "RAlt": 0xE6, "RWin": 0xE7,
+    "Menu": 0x65, "Fn": 0xFF,  # Fn is internal, not standard HID
+}
+
+# Reverse map
+HID_CODE_TO_KEY = {v: k for k, v in HID_KEYCODES.items()}
 
 
-def _unverified(name):
-    raise ProtocolNotCaptured(
-        f"{name}: this report's byte layout has not been reverse-engineered; it is not "
-        f"implemented in this app. Configure key remap / Fn-layer / macros in the vendor "
-        f"software instead."
-    )
+def keycode_from_name(name: str) -> int:
+    """Return the HID usage code for a key name, or None if unknown."""
+    return HID_KEYCODES.get(name)
 
 
-def build_remap_key(key_id, keycode):            # noqa: D401  (stub)
-    _unverified("build_remap_key")
+def key_name_from_code(code: int) -> str | None:
+    """Return the key name for a HID usage code, or None."""
+    return HID_CODE_TO_KEY.get(code)
 
 
-def build_fn_binding(key_id, binding):
-    _unverified("build_fn_binding")
+def build_keymap_read(offset: int) -> bytes:
+    """Build a keymap page read request at *offset* (0, 0x1c, ..., 0xc4)."""
+    pkt = bytearray(REPORT_LEN)
+    pkt[1] = CMD_KEYMAP           # 12
+    pkt[2] = 0x00                 # sub
+    pkt[3] = offset & 0xFF        # offset (single byte, pages every 0x1c)
+    pkt[4] = KEYMAP_PAGE_SIZE     # 0x1c
+    pkt[5] = 0x00                 # reserved
+    return bytes(pkt)
+
+
+def parse_keymap_page(resp: bytes) -> list[int]:
+    """Parse a keymap read response into a list of 14 HID usage codes.
+    Returns empty list if the response isn't a valid keymap page."""
+    if not resp or len(resp) < 7 or resp[0] != CMD_KEYMAP or resp[3] != KEYMAP_PAGE_SIZE:
+        return []
+    codes = []
+    for k in range(KEYMAP_ENTRIES_PER_PAGE):
+        b = 5 + k * 2
+        if b + 1 < len(resp):
+            codes.append(resp[b] | (resp[b + 1] << 8))
+    return codes
+
+
+def build_keymap_write(offset: int, codes: list[int]) -> bytes:
+    """Build a keymap page write. Inferred from read response format."""
+    pkt = bytearray(REPORT_LEN)
+    pkt[1] = CMD_KEYMAP           # 12
+    pkt[2] = 0x00                 # sub
+    pkt[3] = offset & 0xFF        # offset
+    pkt[4] = KEYMAP_PAGE_SIZE     # 0x1c
+    pkt[5] = 0x00                 # reserved
+    for k in range(min(KEYMAP_ENTRIES_PER_PAGE, len(codes))):
+        code = codes[k] & 0xFFFF
+        pkt[6 + k * 2] = code & 0xFF
+        pkt[7 + k * 2] = (code >> 8) & 0xFF
+    return bytes(pkt)
+
+
+# ── Macros — CAPTURED (read only, writes inferred) ──────────────────────────
+MACRO_COUNT = 16
+MACRO_PAGE_SIZE = 0x1C
+
+
+def build_macro_count_read() -> bytes:
+    pkt = bytearray(REPORT_LEN)
+    pkt[1] = CMD_MACRO_COUNT      # 0c
+    return bytes(pkt)
+
+
+def build_macro_info_read() -> bytes:
+    pkt = bytearray(REPORT_LEN)
+    pkt[1] = CMD_MACRO_INFO       # 0d
+    return bytes(pkt)
+
+
+def build_macro_page_read(offset: int) -> bytes:
+    pkt = bytearray(REPORT_LEN)
+    pkt[1] = CMD_MACRO_PAGE       # 0e
+    pkt[3] = offset & 0xFF
+    pkt[4] = (offset >> 8) & 0xFF
+    pkt[5] = MACRO_PAGE_SIZE      # 0x1c
+    return bytes(pkt)
 
 
 # ── Actuation point — CONFIRMED (decoded from captured WebHID traffic) ──
@@ -436,12 +533,15 @@ def parse_socd(resp):
 
 
 def build_snap_tap(enabled, mode, key_pair):
-    _unverified("build_snap_tap")
+    """Alias for build_socd. Kept for compatibility."""
+    raise NotImplementedError("Use build_socd / build_socd_clear instead")
 
 
 def build_macro(key_id, macro):
-    _unverified("build_macro")
+    """TODO: implement macro write protocol (captured reads only so far)."""
+    raise NotImplementedError("Macro write protocol not yet implemented")
 
 
 def build_onboard_save():
-    _unverified("build_onboard_save")
+    """TODO: implement onboard flash save command."""
+    raise NotImplementedError("Onboard save protocol not yet implemented")
