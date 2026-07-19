@@ -161,7 +161,7 @@ for the tray icon, PyInstaller for packaging.
 
 ## Acknowledgements
 
-Developed with the help of Claude, Anthropic's AI coding assistant.
+Developed with the help of OpenCode Go (powered by DeepSeek V4), an open-source AI coding agent.
 
 ## License
 
