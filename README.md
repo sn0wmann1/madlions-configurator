@@ -1,13 +1,23 @@
 # MADLIONS 68 Configurator
 
-![platform: Windows](https://img.shields.io/badge/platform-Windows-2d7dd2)
+![platform: Linux | Windows](https://img.shields.io/badge/platform-Linux%20|%20Windows-2d7dd2)
 ![license: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-e5613c)
 
 A desktop app to configure the **lighting and Hall-Effect performance** of the
-**MADLIONS 60% Hall Effect** keyboard — per-key RGB, animations (built-in and your own),
+**MADLIONS 60% and 68% Hall Effect** keyboards — per-key RGB, animations (built-in and your own),
 actuation / rapid-trigger / SOCD tuning, and profiles — as an alternative to the official web
 configurator. Key remapping, Fn layers, and macros are intentionally left to the official software
 (see [What it doesn't do, and why](#what-it-doesnt-do-and-why)).
+
+## Changes from upstream (this fork)
+
+This fork builds on [MemoryHazy313/madlions-configurator](https://github.com/MemoryHazy313/madlions-configurator) with the following additions:
+
+- **MAD68 support** — PID `0x1058` added to device enumeration, 68-key 65% layout with pixel-accurate keycap positions from the MAD68 Pro reference
+- **Smooth crossfade transitions** — `set_all()` and `set_key_colors()` now use a 0.5s smoothstep crossfade instead of instant color changes
+- **CLI wallpaper-sync mode** — `python main.py --crossfade RRGGBB` runs a one-shot fade and exits, usable from wallpaper-change scripts
+- **Linux/Wayland support** — Qt6 backend for pywebview (fixes GTK/Gdk crash on Hyprland/Wayland), `.desktop` launcher
+- **Fade timing sync** — keyboard fade speed matches OpenRGB (30ms/frame), eliminating the 3-second keyboard lag
 
 It talks to the keyboard directly over USB HID (userspace — no drivers, no admin), and reads the
 board's current state back so the interface reflects what's actually stored on the device.
@@ -68,7 +78,7 @@ when it connects, so a change you make in one shows up in the other after you sw
 Developed and verified against:
 
 - **MADLIONS MAD60** — 60% Hall Effect keyboard, USB **VID `0x373B`, PID `0x1054`**, 61 keys
-  (bottom row: Ctrl, Win, Alt, Space, Alt, Menu, Ctrl, Fn).
+- **MADLIONS MAD68** — 68-key 65% Hall Effect keyboard, USB **VID `0x373B`, PID `0x1058`**, 68 keys (this fork)
 
 Everything was measured on one physical unit. A different firmware revision of the same model will
 very likely work, but the per-key index maps were measured on real hardware. **Other MADLIONS
