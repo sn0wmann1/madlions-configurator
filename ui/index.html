@@ -24,6 +24,7 @@
       <button class="nav-item" data-view="editor"><span>Editor</span></button>
       <button class="nav-item" data-view="performance"><span>Performance</span></button>
       <button class="nav-item" data-view="profiles"><span>Profiles</span></button>
+      <button class="nav-item" data-view="keymap"><span>KeyMap</span></button>
       <button class="nav-item" data-view="settings"><span>Settings</span></button>
       <div class="rail-foot">
         <span class="conn" id="conn-dot"></span>
@@ -194,6 +195,26 @@
         </aside>
       </section>
 
+      <!-- KEYMAP -->
+      <section class="view" id="view-keymap">
+        <div class="board-hero">
+          <div class="keyboard" id="keyboard-keymap"></div>
+          <div class="board-bar">
+            <span class="hint" id="km-hint">orange keys have been remapped · click a key to change its binding</span>
+          </div>
+        </div>
+        <aside class="dock slim">
+          <div class="field">
+            <label>Remap selected key to</label>
+            <select id="km-target" class="sel"></select>
+          </div>
+          <button class="btn gold" id="km-apply">apply remap</button>
+          <button class="btn" id="km-reset-key">reset selected</button>
+          <div class="divider"></div>
+          <button class="btn" id="km-read">refresh from keyboard</button>
+        </aside>
+      </section>
+
       <!-- PROFILES -->
       <section class="view" id="view-profiles">
         <div class="profile-save">
@@ -273,6 +294,7 @@
   <script src="js/editor.js"></script>
   <script src="js/performance.js"></script>
   <script src="js/profiles.js"></script>
+  <script src="js/keymap.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/app.js"></script>
 </body>

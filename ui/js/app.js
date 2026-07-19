@@ -8,6 +8,7 @@ const VIEW_META = {
   animations: ["Effects", "Built-in lighting animations"],
   editor:     ["Editor", "Paint your own keyframe animations"],
   performance:["Performance", "Hall Effect actuation & rapid trigger"],
+  keymap:     ["KeyMap", "Read and remap key bindings"],
   profiles:   ["Profiles", "Snapshot and restore complete looks"],
   settings:   ["Settings", "Calibration, key mapping and device"],
 };
@@ -145,6 +146,7 @@ async function boot() {
   App.Editor.init();
   App.Performance.init();
   App.Profiles.init();
+  App.KeyMap.init();
   App.Settings.init();
   App.Effects.build(await App.api().get_animations());
 

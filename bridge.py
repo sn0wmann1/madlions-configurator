@@ -69,6 +69,7 @@ class Api:
             "mapped": keymap.is_mapped(),
             "custom_animations": profile_store.list_animations(),
             "profiles": profile_store.list_profiles(),
+            "keymap": self.get_keymap(),
         }
 
     # ── Wire build (key_id -> slot) ────────────────────────────────────────────
