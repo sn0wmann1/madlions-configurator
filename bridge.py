@@ -461,29 +461,28 @@ class Api:
 
     # ── Key mapping (read/write onboard keymap via cmd 12/13) ─────────────────
     def get_keymap(self):
-        """Read the full keymap from the keyboard. Returns {firmware_index: hid_code}."""
-        import time
-        codes = []
-        for page in range(protocol.KEYMAP_TOTAL_PAGES):
-            offset = page * protocol.KEYMAP_PAGE_SIZE
-            pkt = protocol.build_keymap_read(offset & 0xFF)
-            self.controller._send_packets([pkt])
-            time.sleep(0.05)
-            resp = self.controller.backend.read(64)
-            if resp:
-                codes.extend(protocol.parse_keymap_page(resp))
-        return {i: c for i, c in enumerate(codes)}
+        """Read the full keymap. Returns {key_id: hid_code}, mapped via slot_for_key."""
+        codes = self._read_keymap_raw()
+        result = {}
+        for kid in self.key_colors:
+            slot = self.slot_for_key.get(kid, kid)
+            if slot < len(codes):
+                result[kid] = codes[slot]
+            else:
+                result[kid] = 0
+        return result
 
     def set_keymap(self, remaps):
-        """Write key remaps. *remaps* = {firmware_index: hid_code}. Only indices
-        present in *remaps* are changed; all others keep their current value."""
+        """Write key remaps. *remaps* = {key_id: hid_code}. Translates key_id → firmware
+        index via slot_for_key before writing."""
         import time
-        current = self._read_keymap_raw()
-        full = list(current) + [0] * (104 - len(current))
+        current_raw = self._read_keymap_raw()
+        full = list(current_raw) + [0] * (104 - len(current_raw))
         full = full[:104]
-        for idx, code in remaps.items():
-            if 0 <= idx < 104:
-                full[idx] = code
+        for kid, code in remaps.items():
+            slot = self.slot_for_key.get(int(kid), int(kid))
+            if 0 <= slot < 104:
+                full[slot] = code
         ok = True
         for page in range(protocol.KEYMAP_TOTAL_PAGES):
             offset = page * protocol.KEYMAP_PAGE_SIZE
@@ -491,6 +490,23 @@ class Api:
             for i in range(protocol.KEYMAP_WRITE_CODES):
                 idx = page * protocol.KEYMAP_ENTRIES_PER_PAGE + i
                 page_codes.append(full[idx] if idx < len(full) else 0)
+            pkt = protocol.build_keymap_write(offset & 0xFF, page_codes)
+            if not self.controller._send_packets([pkt]):
+                ok = False
+            time.sleep(0.05)
+        return ok
+
+    def reset_key(self, key_id):
+        """Reset a single key to default (0x0000 = identity passthrough)."""
+        return self.set_keymap({int(key_id): 0})
+
+    def reset_keymap_all(self):
+        """Reset the entire keymap to defaults (all identity)."""
+        import time
+        ok = True
+        for page in range(protocol.KEYMAP_TOTAL_PAGES):
+            offset = page * protocol.KEYMAP_PAGE_SIZE
+            page_codes = [0] * protocol.KEYMAP_WRITE_CODES
             pkt = protocol.build_keymap_write(offset & 0xFF, page_codes)
             if not self.controller._send_packets([pkt]):
                 ok = False

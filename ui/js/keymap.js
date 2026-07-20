@@ -13,6 +13,7 @@ App.KeyMap = {
 
     App.$("km-apply").addEventListener("click", () => this.applyRemap());
     App.$("km-reset-key").addEventListener("click", () => this.resetKey());
+    App.$("km-reset-all").addEventListener("click", () => this.resetAll());
     App.$("km-read").addEventListener("click", () => this.refresh());
 
     this.buildTargetSelect();
@@ -84,10 +85,15 @@ App.KeyMap = {
 
   async resetKey() {
     if (this.selectedIdx === null) { App.status("click a key first"); return; }
-    const remaps = {};
-    remaps[this.selectedIdx] = 0;
-    await App.api().set_keymap(remaps);
+    await App.api().reset_key(this.selectedIdx);
     await this.refresh();
-    App.status(`key ${this.selectedIdx} reset`);
+    App.status(`key ${this.selectedIdx} reset to default`);
+  },
+
+  async resetAll() {
+    if (!confirm("Reset entire keymap to factory defaults?")) return;
+    await App.api().reset_keymap_all();
+    await this.refresh();
+    App.status("all keys reset to default");
   },
 };
