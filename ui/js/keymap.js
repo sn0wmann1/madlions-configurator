@@ -44,6 +44,8 @@ App.KeyMap = {
   },
 
   async refresh() {
+    App.$("km-mapwarn").textContent = App.state.mapped ? "" : "keys not mapped — run Settings > mapping wizard first";
+    if (!App.state.mapped) { App.status("run mapping wizard first"); return; }
     this.allCodes = await App.api().get_keymap();
     this.renderBoard();
     App.status("keymap loaded");
