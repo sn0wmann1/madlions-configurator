@@ -5,11 +5,8 @@ App.KeyMap = {
   allCodes: {},
 
   init() {
-    this.board = new Board("keyboard-keymap", "select");
+    this.board = new Board("keyboard-keymap", "keymap");
     this.board.render(App.state.layout);
-    this.board.onSelect = (id, isSel) => {
-      if (isSel) this.selectIndex(id);
-    };
 
     App.$("km-apply").addEventListener("click", () => this.applyRemap());
     App.$("km-reset-key").addEventListener("click", () => this.resetKey());

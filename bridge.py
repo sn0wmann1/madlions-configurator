@@ -106,6 +106,29 @@ class Api:
             self._sync_rgb_on_connect()
         return self.controller.status()
 
+    # ── RGB idle timeout (fade off when inactive) ──────────────────────────
+    _idle_timeout = 0
+    _idle_color = None
+
+    def set_idle_timeout(self, seconds):
+        self._idle_timeout = int(seconds)
+
+    def get_idle_timeout(self):
+        return self._idle_timeout
+
+    def idle_fade_off(self):
+        if self.runtime.running:
+            self.runtime.halt()
+        current = self._wire()
+        self._idle_color = current
+        self._crossfade_wire(current, [(0, 0, 0)] * NUM_SLOTS, 1.5)
+
+    def idle_fade_on(self):
+        if self._idle_color is None:
+            return
+        self._crossfade_wire([(0, 0, 0)] * NUM_SLOTS, self._idle_color, 1.5)
+        self._idle_color = None
+
     def get_layout(self):
         return layout.as_dicts()
 

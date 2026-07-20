@@ -155,6 +155,21 @@ async function boot() {
   App.$("stop-anim").addEventListener("click", () => App.Effects.stop());
   App.$("speed").addEventListener("input", (e) => { const v = +e.target.value; App.$("speedv").textContent = v.toFixed(1); App.Effects.setSpeed(v); });
 
+  // ── Idle timeout: fade RGB off after inactivity ──────────────────────
+  let idleTimer = null, idleOff = false, idleSeconds = 30;
+  App.$("idle-timeout").addEventListener("input", (e) => {
+    idleSeconds = +e.target.value;
+    App.$("idle-timeoutv").textContent = idleSeconds + "s";
+    App.api().set_idle_timeout(idleSeconds);
+  });
+  function resetIdle() {
+    clearTimeout(idleTimer);
+    if (idleOff) { App.api().idle_fade_on(); idleOff = false; }
+    if (idleSeconds > 0) idleTimer = setTimeout(() => { App.api().idle_fade_off(); idleOff = true; }, idleSeconds * 1000);
+  }
+  ["pointermove","pointerdown","keydown","wheel"].forEach(e => document.addEventListener(e, resetIdle, {passive:true}));
+  resetIdle();
+
   App.hydrate(await App.api().get_state());
   App.status("ready");
 }

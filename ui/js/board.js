@@ -46,6 +46,7 @@ class Board {
 
   _begin(id) {
     if (App.state.mapping) { App.Settings.mapAssign(id); return; }   // wizard: single assign, no drag
+    if (this.mode === "keymap") { App.KeyMap.selectIndex(id); return; }  // keymap: click-only, no drag
     if (this.mode === "paint") {
       this._stroke = true;
       if (this.onStrokeStart) this.onStrokeStart(id);   // owner decides paint-vs-erase for the stroke
