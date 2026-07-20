@@ -548,12 +548,31 @@ class Api:
         return {"ok": bool(ok1 and ok2), "perf": dict(self.perf)}
 
     # ── Key mapping (read/write onboard keymap via cmd 12/13) ─────────────────
+    _fw_to_key = None
+    _key_to_fw = None
+
+    def _load_mapping(self):
+        if self._fw_to_key is not None:
+            return
+        import json, os
+        path = os.path.join(os.path.dirname(__file__), "engine", "keymap_mapping.json")
+        try:
+            with open(path) as f:
+                data = json.load(f)
+            self._fw_to_key = {int(k): v for k, v in data.get("fw_to_key", {}).items()}
+            self._key_to_fw = {int(k): v for k, v in data.get("key_to_fw", {}).items()}
+        except Exception:
+            self._fw_to_key = {}
+            self._key_to_fw = {}
+
     def get_keymap(self):
-        """Read the full keymap. Returns {key_id: hid_code}. Uses identity mapping."""
+        """Read keymap mapped to visual key_ids via firmware→visual mapping."""
+        self._load_mapping()
         codes = self._read_keymap_raw()
         result = {}
         for kid in range(layout.NUM_KEYS):
-            result[kid] = codes[kid] if kid < len(codes) else 0
+            fw = self._key_to_fw.get(kid, kid)
+            result[kid] = codes[fw] if fw < len(codes) else 0
         return result
 
     def _write_keymap_pages(self, codes_112):
@@ -583,52 +602,71 @@ class Api:
         return ok
 
     def set_keymap(self, remaps):
-        """Write key remaps. *remaps* = {key_id: hid_code}. Reads current, merges,
-        writes all 8 pages including the 14th code per page."""
+        """Write key remaps. remaps = {key_id: hid_code}. Maps visual→firmware, preserves others."""
+        self._load_mapping()
         import time
         current = self._read_keymap_raw()
-        if len(current) < 68:
-            current = protocol.default_keymap()
-        full = list(current) + [0] * (104 - len(current))
-        full = full[:104]
+        full = list(current) + [0] * (112 - len(current))
+        full = full[:112]
         for kid, code in remaps.items():
-            if 0 <= int(kid) < 104:
-                full[int(kid)] = code
+            fw = self._key_to_fw.get(int(kid), int(kid))
+            if 0 <= fw < 112:
+                full[fw] = code
         return self._write_keymap_pages(full)
 
     def reset_key(self, key_id):
-        """Reset a single key to its factory default. Reads current, patches,
-        writes back including 14th code fix."""
+        """Reset a single key to factory default from golden template."""
+        import json, os
         kid = int(key_id)
-        current = self._read_keymap_raw()
-        if len(current) < 68:
-            current = protocol.default_keymap()
-        full = list(current) + [0] * (104 - len(current))
-        full = full[:104]
-        if kid < len(protocol.default_keymap()):
-            full[kid] = protocol.default_keymap()[kid]
-        return self._write_keymap_pages(full)
+        path = os.path.join(os.path.dirname(__file__), "engine", "keymap_golden.json")
+        try:
+            with open(path) as f:
+                golden = json.load(f)
+            self._load_mapping()
+            fw = self._key_to_fw.get(kid, kid)
+            if fw < len(golden):
+                return self.set_keymap({kid: golden[fw]})
+        except Exception:
+            pass
+        return False
 
     def reset_keymap_all(self):
-        """Write the full 68-key factory-default keymap including 14th codes."""
-        defaults = protocol.default_keymap()
-        full = list(defaults) + [0] * (104 - len(defaults))
-        full = full[:104]
+        """Write the full factory-default keymap from golden template (all 112 entries)."""
+        import json, os, time
+        path = os.path.join(os.path.dirname(__file__), "engine", "keymap_golden.json")
+        try:
+            with open(path) as f:
+                golden = json.load(f)
+        except Exception:
+            return False
+        full = list(golden) + [0] * (112 - len(golden))
+        full = full[:112]
         return self._write_keymap_pages(full)
 
     def _read_keymap_raw(self):
+        """Read all 112 keymap entries using 7-code sub-reads."""
         import time
+        self.controller.auto_connect()
         codes = []
-        for page in range(protocol.KEYMAP_TOTAL_PAGES):
-            offset = page * protocol.KEYMAP_PAGE_SIZE
-            pkt = protocol.build_keymap_read(offset & 0xFF)
-            self.controller._send_packets([pkt])
-            time.sleep(0.05)
-            resp = self.controller.backend.read(64)
-            if resp:
-                codes.extend(protocol.parse_keymap_page(resp))
-            else:
-                codes.extend([0] * protocol.KEYMAP_ENTRIES_PER_PAGE)
+        for page in range(8):
+            for half in (0, 7):
+                byte_off = page * protocol.KEYMAP_PAGE_SIZE + half * 2
+                pkt = bytearray(protocol.REPORT_LEN)
+                pkt[1] = protocol.CMD_KEYMAP
+                pkt[2] = 0x00
+                pkt[3] = byte_off & 0xFF
+                pkt[4] = 0x0E
+                pkt[5] = 0x00
+                self.controller.backend.write(pkt)
+                time.sleep(0.03)
+                resp = self.controller.backend.read(64)
+                if resp:
+                    for k in range(min(7, (len(resp) - 5) // 2)):
+                        b = 5 + k * 2
+                        if b + 1 < len(resp):
+                            codes.append(resp[b] | (resp[b + 1] << 8))
+                else:
+                    codes.extend([0] * 7)
         return codes
 
     # ── Read-back from the board (CONFIRMED) ────────────────────────────────────
