@@ -137,7 +137,7 @@ body {
 /* Lighting/Performance: board + dock side by side, but the dock wraps BELOW the
    board when the window is too narrow (instead of overlapping it). */
 #view-lighting, #view-performance { gap: 26px; align-items: flex-start; flex-wrap: wrap; align-content: flex-start; }
-#view-animations, #view-editor, #view-profiles, #view-settings { flex-direction: column; }
+#view-animations, #view-editor, #view-profiles, #view-settings, #view-keymap { flex-direction: column; }
 
 @keyframes viewin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
