@@ -52,16 +52,18 @@ class Api:
     def _start_auto_reconnect(self):
         """Poll for keyboard disconnect/reconnect and auto-sync RGB."""
         import threading, time
+        from device.hid_device import find_rgb_interface
         def _poll():
             while True:
                 time.sleep(2)
                 try:
+                    real_present = find_rgb_interface() is not None
                     was = self._was_connected
-                    now = self.controller.is_connected
-                    if not was and now:
+                    if not was and real_present:
                         self._was_connected = True
+                        self.controller.auto_connect()
                         self._sync_rgb_on_connect()
-                    elif was and not now:
+                    elif was and not real_present:
                         self._was_connected = False
                 except Exception:
                     pass
@@ -592,6 +594,8 @@ class Api:
             resp = self.controller.backend.read(64)
             if resp:
                 codes.extend(protocol.parse_keymap_page(resp))
+            else:
+                codes.extend([0] * protocol.KEYMAP_ENTRIES_PER_PAGE)
         return codes
 
     # ── Read-back from the board (CONFIRMED) ────────────────────────────────────

@@ -117,8 +117,9 @@ def main():
         return
 
     api = Api()
+    from engine.layout import _MODEL
     window = webview.create_window(
-        "MADLIONS 68 — Configurator",
+        f"MADLIONS {_MODEL[-2:]} — Configurator",
         os.path.join(_UI_DIR, "index.html"),
         js_api=api,
         width=1240,
