@@ -205,30 +205,28 @@
         <div class="board-hero">
           <div class="keyboard" id="keyboard-keymap"></div>
           <div class="board-bar">
-            <span class="warn" id="km-mapwarn"></span>
-            <span class="hint" id="km-hint">orange keys are remapped · click a key to change</span>
+            <span class="hint" id="km-hint">click a key on the keyboard, then pick a binding from the grid below</span>
           </div>
         </div>
-        <aside class="dock slim">
-          <div class="field">
-            <label>layer</label>
-            <select id="km-layer">
-              <option value="0">Normal</option>
-              <option value="1">FN1</option>
-              <option value="2">FN2 (Mac)</option>
-              <option value="3">FN3</option>
-            </select>
+        <div class="keymap-panel">
+          <div class="km-toolbar">
+            <div class="field inline">
+              <label>layer</label>
+              <select id="km-layer">
+                <option value="0">Normal</option>
+                <option value="1">FN1</option>
+                <option value="2">FN2 (Mac)</option>
+                <option value="3">FN3</option>
+              </select>
+            </div>
+            <span class="km-sel" id="km-sel">no key selected</span>
+            <button class="btn gold" id="km-apply">apply</button>
+            <button class="btn" id="km-reset-key">reset key</button>
+            <button class="btn danger" id="km-reset-all">reset all</button>
+            <button class="btn" id="km-read">refresh</button>
           </div>
-          <div class="field">
-            <label>Remap selected key to</label>
-            <select id="km-target" class="sel"></select>
-          </div>
-          <button class="btn gold" id="km-apply">apply remap</button>
-          <button class="btn" id="km-reset-key">reset selected</button>
-          <button class="btn danger" id="km-reset-all">reset all to default</button>
-          <div class="divider"></div>
-          <button class="btn" id="km-read">refresh from keyboard</button>
-        </aside>
+          <div class="km-grid" id="km-grid"></div>
+        </div>
       </section>
 
       <!-- PROFILES -->
