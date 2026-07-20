@@ -205,28 +205,22 @@
         <div class="board-hero">
           <div class="keyboard" id="keyboard-keymap"></div>
           <div class="board-bar">
-            <span class="hint" id="km-hint">click a key on the keyboard, then pick a binding from the grid below</span>
-          </div>
-        </div>
-        <div class="keymap-panel">
-          <div class="km-toolbar">
-            <div class="field inline">
-              <label>layer</label>
-              <select id="km-layer">
-                <option value="0">Normal</option>
-                <option value="1">FN1</option>
-                <option value="2">FN2 (Mac)</option>
-                <option value="3">FN3</option>
-              </select>
-            </div>
-            <span class="km-sel" id="km-sel">no key selected</span>
+            <span class="hint">edit layer</span>
+            <select id="km-layer" class="sel thin">
+              <option value="0">Normal</option>
+              <option value="1">FN1</option>
+              <option value="2">FN2 (Mac)</option>
+              <option value="3">FN3</option>
+            </select>
+            <span class="km-sel" id="km-sel">click a key</span>
+            <span class="sep"></span>
             <button class="btn gold" id="km-apply">apply</button>
             <button class="btn" id="km-reset-key">reset key</button>
             <button class="btn danger" id="km-reset-all">reset all</button>
             <button class="btn" id="km-read">refresh</button>
           </div>
-          <div class="km-grid" id="km-grid"></div>
         </div>
+        <div class="km-grid" id="km-grid"></div>
       </section>
 
       <!-- PROFILES -->
