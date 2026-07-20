@@ -43,10 +43,11 @@ class Api:
         # SOCD / snap-tap bindings, in slot order. Each: {key1, key2, mode, travel_mm, quick_trigger}.
         self.socd = []
 
-        # Auto RGB sync + reconnect detection
+        # Auto RGB sync + reconnect detection + idle wake on keypress
         self._sync_rgb_on_connect()
         self._was_connected = self.controller.is_connected
         self._start_auto_reconnect()
+        self._start_keypress_monitor()
 
     # ── Status / metadata ──────────────────────────────────────────────────────
     def _start_auto_reconnect(self):
@@ -108,7 +109,7 @@ class Api:
 
     # ── RGB idle timeout (fade off when inactive) ──────────────────────────
     _idle_timeout = 0
-    _idle_color = None
+    _idle_off = False
 
     def set_idle_timeout(self, seconds):
         self._idle_timeout = int(seconds)
@@ -119,10 +120,44 @@ class Api:
     def idle_fade_off(self):
         if self.runtime.running:
             self.runtime.halt()
+        self._idle_off = True
         self._crossfade_wire(self._wire(), [(0, 0, 0)] * NUM_SLOTS, 1.5)
 
     def idle_fade_on(self):
+        if not self._idle_off:
+            return
+        self._idle_off = False
         self._sync_rgb_on_connect()
+
+    def _start_keypress_monitor(self):
+        """Watch evdev keyboard devices and wake RGB on any keypress."""
+        import threading
+        def _watch():
+            import glob, os, select
+            kbd_paths = sorted(glob.glob("/dev/input/by-path/*kbd"))
+            if not kbd_paths:
+                return
+            fds = {}
+            try:
+                for path in kbd_paths:
+                    try:
+                        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+                        fds[fd] = path
+                    except OSError:
+                        pass
+                while True:
+                    r, _, _ = select.select(list(fds.keys()), [], [], 2)
+                    if r and self._idle_off:
+                        self.idle_fade_on()
+                    for fd in r:
+                        try:
+                            os.read(fd, 4096)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+        t = threading.Thread(target=_watch, daemon=True)
+        t.start()
 
     def is_fullscreen(self):
         """Check if any Hyprland window is fullscreen (for movie/game detection)."""
