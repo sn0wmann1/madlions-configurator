@@ -42,9 +42,32 @@ class Api:
                      "six_key": False, "false_touch": True}
         # SOCD / snap-tap bindings, in slot order. Each: {key1, key2, mode, travel_mm, quick_trigger}.
         self.socd = []
+
+        # Auto RGB sync + reconnect detection
         self._sync_rgb_on_connect()
+        self._was_connected = self.controller.is_connected
+        self._start_auto_reconnect()
 
     # ── Status / metadata ──────────────────────────────────────────────────────
+    def _start_auto_reconnect(self):
+        """Poll for keyboard disconnect/reconnect and auto-sync RGB."""
+        import threading, time
+        def _poll():
+            while True:
+                time.sleep(2)
+                try:
+                    was = self._was_connected
+                    now = self.controller.is_connected
+                    if not was and now:
+                        self._was_connected = True
+                        self._sync_rgb_on_connect()
+                    elif was and not now:
+                        self._was_connected = False
+                except Exception:
+                    pass
+        t = threading.Thread(target=_poll, daemon=True)
+        t.start()
+
     def _sync_rgb_on_connect(self):
         """Apply the current wallpaper accent color to the keyboard on startup."""
         try:
@@ -63,7 +86,7 @@ class Api:
             h, l, s = colorsys.rgb_to_hls(r, g, b)
             rl, gl, bl = colorsys.hls_to_rgb(h, 0.45, 0.90)
             ri, gi, bi = int(rl * 255), int(gl * 255), int(bl * 255)
-            # Instant set — no crossfade on startup
+            # Use instant push, not crossfade (avoids animation runtime at startup)
             target = (ri, gi, bi)
             target_wire = [target] * NUM_SLOTS
             for kid in self.key_colors:
@@ -77,6 +100,8 @@ class Api:
 
     def reconnect(self):
         self.controller.auto_connect()
+        if self.controller.is_connected:
+            self._sync_rgb_on_connect()
         return self.controller.status()
 
     def get_layout(self):
