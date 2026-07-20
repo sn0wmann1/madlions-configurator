@@ -42,8 +42,36 @@ class Api:
                      "six_key": False, "false_touch": True}
         # SOCD / snap-tap bindings, in slot order. Each: {key1, key2, mode, travel_mm, quick_trigger}.
         self.socd = []
+        self._sync_rgb_on_connect()
 
     # ── Status / metadata ──────────────────────────────────────────────────────
+    def _sync_rgb_on_connect(self):
+        """Apply the current wallpaper accent color to the keyboard on startup."""
+        try:
+            import json, colorsys, os
+            colors_file = os.path.expanduser("~/.cache/skwd-wall/colors.json")
+            if not os.path.exists(colors_file):
+                return
+            with open(colors_file) as f:
+                data = json.load(f)
+            accent = data.get("accent", "").lstrip("#")
+            if len(accent) < 6:
+                return
+            r = int(accent[0:2], 16) / 255.0
+            g = int(accent[2:4], 16) / 255.0
+            b = int(accent[4:6], 16) / 255.0
+            h, l, s = colorsys.rgb_to_hls(r, g, b)
+            rl, gl, bl = colorsys.hls_to_rgb(h, 0.45, 0.90)
+            ri, gi, bi = int(rl * 255), int(gl * 255), int(bl * 255)
+            # Instant set — no crossfade on startup
+            target = (ri, gi, bi)
+            target_wire = [target] * NUM_SLOTS
+            for kid in self.key_colors:
+                self.key_colors[kid] = list(target)
+            self.controller.send_colors(target_wire)
+        except Exception:
+            pass
+
     def get_status(self):
         return self.controller.status()
 
@@ -461,57 +489,72 @@ class Api:
 
     # ── Key mapping (read/write onboard keymap via cmd 12/13) ─────────────────
     def get_keymap(self):
-        """Read the full keymap. Returns {key_id: hid_code}, mapped via slot_for_key."""
+        """Read the full keymap. Returns {key_id: hid_code}. Uses identity mapping."""
         codes = self._read_keymap_raw()
         result = {}
-        for kid in self.key_colors:
-            slot = self.slot_for_key.get(kid, kid)
-            if slot < len(codes):
-                result[kid] = codes[slot]
-            else:
-                result[kid] = 0
+        for kid in range(layout.NUM_KEYS):
+            result[kid] = codes[kid] if kid < len(codes) else 0
         return result
 
-    def set_keymap(self, remaps):
-        """Write key remaps. *remaps* = {key_id: hid_code}. Translates key_id → firmware
-        index via slot_for_key before writing."""
+    def _write_keymap_pages(self, codes_112):
+        """Write 112 keycodes using 7+7 split per page (16 packets total).
+        Two 7-code writes per page cover all 14 codes without truncation."""
         import time
-        current_raw = self._read_keymap_raw()
-        full = list(current_raw) + [0] * (104 - len(current_raw))
+        ok = True
+        codes = list(codes_112) + [0] * (112 - len(codes_112))
+        codes = codes[:112]
+        idx = 0
+        for page in range(8):
+            for half_offset in (0, 14):  # byte offset: 0 then 14 (7 codes × 2 bytes)
+                pkt = bytearray(protocol.REPORT_LEN)
+                pkt[1] = protocol.CMD_KEYMAP_WRITE
+                pkt[2] = 0x00
+                pkt[3] = (page * protocol.KEYMAP_PAGE_SIZE + half_offset) & 0xFF
+                pkt[4] = 0x0E  # 14 bytes = 7 codes
+                pkt[5] = 0x00
+                for k in range(7):
+                    code = codes[idx] if idx < len(codes) else 0
+                    pkt[6 + k * 2] = code & 0xFF
+                    pkt[7 + k * 2] = (code >> 8) & 0xFF
+                    idx += 1
+                if not self.controller._send_packets([pkt]):
+                    ok = False
+                time.sleep(0.05)
+        return ok
+
+    def set_keymap(self, remaps):
+        """Write key remaps. *remaps* = {key_id: hid_code}. Reads current, merges,
+        writes all 8 pages including the 14th code per page."""
+        import time
+        current = self._read_keymap_raw()
+        if len(current) < 68:
+            current = protocol.default_keymap()
+        full = list(current) + [0] * (104 - len(current))
         full = full[:104]
         for kid, code in remaps.items():
-            slot = self.slot_for_key.get(int(kid), int(kid))
-            if 0 <= slot < 104:
-                full[slot] = code
-        ok = True
-        for page in range(protocol.KEYMAP_TOTAL_PAGES):
-            offset = page * protocol.KEYMAP_PAGE_SIZE
-            page_codes = []
-            for i in range(protocol.KEYMAP_WRITE_CODES):
-                idx = page * protocol.KEYMAP_ENTRIES_PER_PAGE + i
-                page_codes.append(full[idx] if idx < len(full) else 0)
-            pkt = protocol.build_keymap_write(offset & 0xFF, page_codes)
-            if not self.controller._send_packets([pkt]):
-                ok = False
-            time.sleep(0.05)
-        return ok
+            if 0 <= int(kid) < 104:
+                full[int(kid)] = code
+        return self._write_keymap_pages(full)
 
     def reset_key(self, key_id):
-        """Reset a single key to default (0x0000 = identity passthrough)."""
-        return self.set_keymap({int(key_id): 0})
+        """Reset a single key to its factory default. Reads current, patches,
+        writes back including 14th code fix."""
+        kid = int(key_id)
+        current = self._read_keymap_raw()
+        if len(current) < 68:
+            current = protocol.default_keymap()
+        full = list(current) + [0] * (104 - len(current))
+        full = full[:104]
+        if kid < len(protocol.default_keymap()):
+            full[kid] = protocol.default_keymap()[kid]
+        return self._write_keymap_pages(full)
 
     def reset_keymap_all(self):
-        """Reset the entire keymap to defaults (all identity)."""
-        import time
-        ok = True
-        for page in range(protocol.KEYMAP_TOTAL_PAGES):
-            offset = page * protocol.KEYMAP_PAGE_SIZE
-            page_codes = [0] * protocol.KEYMAP_WRITE_CODES
-            pkt = protocol.build_keymap_write(offset & 0xFF, page_codes)
-            if not self.controller._send_packets([pkt]):
-                ok = False
-            time.sleep(0.05)
-        return ok
+        """Write the full 68-key factory-default keymap including 14th codes."""
+        defaults = protocol.default_keymap()
+        full = list(defaults) + [0] * (104 - len(defaults))
+        full = full[:104]
+        return self._write_keymap_pages(full)
 
     def _read_keymap_raw(self):
         import time

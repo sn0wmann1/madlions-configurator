@@ -168,6 +168,33 @@ def build_socd_clear(slot=0):
 # desktop driver, but the protocol is expected to mirror the read format).
 # ============================================================================
 
+# Factory-default MAD68 keymap — firmware indices 0-67 with their identity HID codes.
+# Used by reset_keymap_all() to restore the keyboard to working state.
+# Index order matches the MAD68 firmware matrix (verified against hub.f.gg captures).
+_MAD68_DEFAULT_KEYMAP = [
+    0x29, 0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x2D, 0x2E, 0x2A,
+    0x49, 0x2B, 0x14, 0x1A, 0x08, 0x15, 0x17, 0x1C, 0x18, 0x0C, 0x12, 0x13, 0x2F, 0x30,
+    0x31, 0x4C, 0x39, 0x04, 0x16, 0x07, 0x09, 0x0A, 0x0B, 0x0D, 0x0E, 0x0F, 0x33, 0x34,
+    0x28, 0x4B, 0xE1, 0x1D, 0x1B, 0x06, 0x19, 0x05, 0x11, 0x10, 0x36, 0x37, 0x38, 0xE5,
+    0x52, 0x4E, 0xE0, 0xE3, 0xE2, 0x2C, 0xE6, 0x00, 0xE4, 0x50, 0x51, 0x4F,
+]
+
+
+def default_keymap():
+    """Return the factory-default keymap from the saved golden template.
+    Falls back to the hardcoded default if the golden file doesn't exist."""
+    import json, os
+    path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "engine", "keymap_golden.json")
+    try:
+        with open(path) as f:
+            codes = json.load(f)
+        if isinstance(codes, list) and len(codes) >= 68:
+            return list(codes)
+    except Exception:
+        pass
+    return list(_MAD68_DEFAULT_KEYMAP)
+
+
 CMD_KEYMAP = 0x12             # read keymap page
 CMD_KEYMAP_WRITE = 0x13        # write keymap page (confirmed on hardware)
 KEYMAP_PAGE_SIZE = 0x1C        # 28 bytes per page
