@@ -120,14 +120,31 @@ class Api:
     def idle_fade_off(self):
         if self.runtime.running:
             self.runtime.halt()
-        self._idle_off = True
         self._crossfade_wire(self._wire(), [(0, 0, 0)] * NUM_SLOTS, 1.5)
+        self._flush_kbd_events()  # drain events caused by HID writes
+        self._idle_off = True      # only mark idle after flushing
 
     def idle_fade_on(self):
         if not self._idle_off:
             return
         self._idle_off = False
         self._sync_rgb_on_connect()
+
+    def _flush_kbd_events(self):
+        """Drain all pending keyboard input device events."""
+        import glob, os
+        for path in sorted(glob.glob("/dev/input/by-path/*kbd")):
+            try:
+                fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+                while True:
+                    try:
+                        if not os.read(fd, 4096):
+                            break
+                    except BlockingIOError:
+                        break
+                os.close(fd)
+            except OSError:
+                pass
 
     def _start_keypress_monitor(self):
         """Watch evdev keyboard devices and wake RGB on any keypress."""
