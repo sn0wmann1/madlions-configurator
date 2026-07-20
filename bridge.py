@@ -119,15 +119,25 @@ class Api:
     def idle_fade_off(self):
         if self.runtime.running:
             self.runtime.halt()
-        current = self._wire()
-        self._idle_color = current
-        self._crossfade_wire(current, [(0, 0, 0)] * NUM_SLOTS, 1.5)
+        self._crossfade_wire(self._wire(), [(0, 0, 0)] * NUM_SLOTS, 1.5)
 
     def idle_fade_on(self):
-        if self._idle_color is None:
-            return
-        self._crossfade_wire([(0, 0, 0)] * NUM_SLOTS, self._idle_color, 1.5)
-        self._idle_color = None
+        self._sync_rgb_on_connect()
+
+    def is_fullscreen(self):
+        """Check if any Hyprland window is fullscreen (for movie/game detection)."""
+        try:
+            import subprocess, json
+            clients = json.loads(subprocess.run(
+                ["hyprctl", "-j", "clients"], capture_output=True, text=True, timeout=2
+            ).stdout)
+            if isinstance(clients, list):
+                for c in clients:
+                    if c.get("fullscreen", 0) > 0 or c.get("fakeFullscreen", False):
+                        return True
+        except Exception:
+            pass
+        return False
 
     def get_layout(self):
         return layout.as_dicts()

@@ -165,7 +165,10 @@ async function boot() {
   function resetIdle() {
     clearTimeout(idleTimer);
     if (idleOff) { App.api().idle_fade_on(); idleOff = false; }
-    if (idleSeconds > 0) idleTimer = setTimeout(() => { App.api().idle_fade_off(); idleOff = true; }, idleSeconds * 1000);
+    if (idleSeconds > 0) idleTimer = setTimeout(async () => {
+      if (await App.api().is_fullscreen()) { resetIdle(); return; }
+      App.api().idle_fade_off(); idleOff = true;
+    }, idleSeconds * 1000);
   }
   ["pointermove","pointerdown","keydown","wheel"].forEach(e => document.addEventListener(e, resetIdle, {passive:true}));
   resetIdle();
