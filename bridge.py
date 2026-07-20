@@ -631,7 +631,7 @@ class Api:
         return False
 
     def reset_keymap_all(self):
-        """Write the full factory-default keymap from golden template (all 112 entries)."""
+        """Write factory defaults only to physical keys (0-67), preserving Fn layers (68+)."""
         import json, os, time
         path = os.path.join(os.path.dirname(__file__), "engine", "keymap_golden.json")
         try:
@@ -639,8 +639,11 @@ class Api:
                 golden = json.load(f)
         except Exception:
             return False
-        full = list(golden) + [0] * (112 - len(golden))
+        current = self._read_keymap_raw()
+        full = list(current) + [0] * (112 - len(current))
         full = full[:112]
+        for i in range(min(68, len(golden))):
+            full[i] = golden[i]
         return self._write_keymap_pages(full)
 
     def _read_keymap_raw(self):
