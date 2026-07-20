@@ -566,14 +566,30 @@ class Api:
             self._key_to_fw = {}
 
     def get_keymap(self):
-        """Read keymap mapped to visual key_ids via firmware→visual mapping."""
+        return self._get_layer_keymap(0)
+
+    def _get_layer_keymap(self, layer):
+        """Read keymap for a specific layer (0=base, 1=FN1, 2=FN2, 3=FN3)."""
         self._load_mapping()
         codes = self._read_keymap_raw()
         result = {}
+        base = layer * 68 if layer > 0 else 0
         for kid in range(layout.NUM_KEYS):
-            fw = self._key_to_fw.get(kid, kid)
+            if layer == 0:
+                fw = self._key_to_fw.get(kid, kid)
+            else:
+                fw = base + kid
             result[kid] = codes[fw] if fw < len(codes) else 0
         return result
+
+    def get_fn_layers(self):
+        """Return all 4 layers keymaps."""
+        return {
+            "normal": self._get_layer_keymap(0),
+            "fn1": self._get_layer_keymap(1),
+            "fn2": self._get_layer_keymap(2),
+            "fn3": self._get_layer_keymap(3),
+        }
 
     def _write_keymap_pages(self, codes_112):
         """Write 112 keycodes using 7+7 split per page (16 packets total).
@@ -612,6 +628,19 @@ class Api:
             fw = self._key_to_fw.get(int(kid), int(kid))
             if 0 <= fw < 112:
                 full[fw] = code
+        return self._write_keymap_pages(full)
+
+    def set_fn_binding(self, layer, key_id, hid_code):
+        """Set a single Fn layer binding. layer: 1=FN1, 2=FN2, 3=FN3."""
+        import time
+        self._load_mapping()
+        current = self._read_keymap_raw()
+        full = list(current) + [0] * (112 - len(current))
+        full = full[:112]
+        base = int(layer) * 68
+        fw = base + int(key_id)
+        if 0 <= fw < 112:
+            full[fw] = int(hid_code)
         return self._write_keymap_pages(full)
 
     def reset_key(self, key_id):
